@@ -1,0 +1,191 @@
+*{
+	padding: 0px;
+	margin: 0px;
+}
+
+.header{
+	/*margin: 25px auto 0px 80px; 可能因為不同瀏覽器, 造成與頁面不同間距*/
+	/*解決辦法:響應式布局*/
+    margin: 25px auto;
+	width: 1200px;
+}
+
+/*
+組合選擇器中的空格，同一個家族才獲選; 必須是在.header家族中，不在家族中的標籤就無法套用樣式了
+*/
+.header .menu ul{
+    display: none;
+    list-style: none;
+    position: absolute;
+    width: 80px; /*to make list align-center; use the same width as underline;*/
+    opacity: 0.5;
+    background-color: white;
+}
+
+.header .logo{
+	float: left;
+	position: relative;
+}
+
+.header .menu{
+	float: left;
+	position: relative;
+	margin-top: 12px;
+	margin-left: 16px;
+}
+
+.header .menu ul li{
+	margin-top: 20px;
+	text-align: center;
+}
+
+.header .menu .menu_title{
+	border-bottom: 1px solid black;
+	padding-bottom: 20px;
+	width: 80px;
+	text-align: center;
+}
+
+a{
+	text-decoration: none;
+}
+
+.header .auth{
+	float: right;
+}
+
+.header .auth ul li{
+	float: left;
+	margin-right: 70px;
+	margin-top: 12px;
+	list-style: none;
+}
+
+.content{
+	width: 1200px;
+	margin: 25px auto;
+}
+
+.content .banner .banner_img{
+	margin-top: 30px;
+}
+/* 菜單顯示, 折疊*/
+/*.header .menu:hover ul{
+	display: block;
+}*/
+/* 帶有 display:block 屬性的元素，像是 <div>、 <h1>、<p> 等，
+在不更改 display 的狀態下，會在容器中呈現滿版*/
+/*有 display:block 屬性的元素即便更改了寬度，剩餘的空間依然還是會在網頁上佔有空間，
+後續的元素並不會因為寬度縮小了，而向上並排。*/
+/*https://vocus.cc/article/61370aaffd89780001bedfff*/
+
+.content .img-content{
+    width: 1280px;
+}
+
+.content .img-content ul li{
+	width: 361px;
+	float: left;
+	margin: 0 60px 40px 0;
+	list-style: none;
+	/*border setting*/
+	margin-top: 20px;
+	height: 500px;
+	box-shadow: 0 0 3px 3px #ccc;
+	-webkit-box-shadow: 0 0 3px 3px #ccc; /*google browser*/
+	-moz-box-shadow: 0 0 3px 3px #ccc; /*firefox browser*/
+	background-color: #ffffff;
+}
+
+/*set title*/
+.img-content>ul>li .info h3{
+	font-size: 25px;
+	color: red;
+	margin-bottom: 20px;
+	margin-top: 20px;
+}
+/* 段落的行間距*/
+.img-content>ul>li .info p{
+	line-height: 25px;
+	margin-bottom: 20px;
+}
+
+body{
+   background-color: #f5f5f5;
+}
+
+.info{
+	margin-left: 30px;
+	margin-right: 30px;
+}
+
+.img-content .info .img-btn .price{
+	font-size: 20px;
+	color: red;
+}
+
+.content .info .img-btn{
+	width: 300px;
+}
+
+.content .info .img-btn .btn{
+	width: 60px;
+	height: 30px;
+	background-color: red;
+	text-align: center; /*使cart對齊*/
+    border-radius: 5px;
+    float: right;
+}
+
+.content .info .img-btn .cart img{
+	width: 30px;
+	height: 20px;
+	margin-top: 5px;
+}
+
+.content .info .img-btn .price{
+	float: left;
+}
+
+.page-nav ul li{
+	float: left;
+	margin-right: 20px;
+	list-style: none;
+}
+
+.page-nav{
+	width: 100%;
+	height: 60px;
+	line-height: 60px; /*垂直居中*/
+	/*border: 1px solid black;*/
+	overflow: hidden;
+}
+
+.page-nav ul{
+	margin: auto;  /*水平居中*/
+	overflow: hidden;
+	width: 500px; /*必須要設置寬度, 才能水平居中*/
+}
+
+.first-page{
+	border-radius: 50%;
+	background-color: #c5c5c5;
+	padding: 3px 9px; 
+}
+
+.footer{
+	width: 100%;
+	height: 100px;
+	margin: 60px auto;
+	border: 1px solid #ccc;
+    overflow: hidden;
+}
+
+.footer p{
+	text-align: center;
+	line-height: 80px;
+}
+
+.footer p span{
+    color: #ff1493;
+}
