@@ -1,0 +1,860 @@
+import smtplib
+import random
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import csv
+from sklearn.linear_model import LinearRegression
+import numpy as np
+
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 587
+EMAIL_ADDRESS = 's1052001@gm.ncue.edu.tw'
+EMAIL_PASSWORD = 'wgvrrrffjewcfdyx'
+
+
+
+class Account:
+    def __init__(self, username, password, account_type, email, subject=None):
+        self.username = username
+        self.password = password
+        self.account_type = account_type
+        self.email = email
+        self.subject = subject
+
+    def __str__(self):
+        return f"Username: {self.username}, Password: {self.password}, Account Type: {self.account_type}, Email: {self.email}, Subject: {self.subject}"
+
+
+
+class LoginSystem:
+    def __init__(self):#建立帳號和成績的list
+        self.accounts = []
+        self.grades = []
+
+
+
+
+    def add_account(self, username, password, account_type, email, subject=None):#新增帳戶函式
+        account = Account(username, password, account_type, email, subject)
+        self.accounts.append(account)
+        self.save_to_file()
+        print(f"帳號 {username} 已成功新增！")
+
+
+    def remove_account(self, username):#移除帳戶函式
+        for account in self.accounts:
+            if account.username == username:
+                self.accounts.remove(account)
+                self.save_to_file()
+                print(f"帳號 {username} 已成功刪除！")
+                return
+        print(f"找不到帳號 {username}，無法刪除！")
+
+    def change_account_type(self, username, new_account_type, new_subject=None):#更改帳戶類型函式
+        for account in self.accounts:
+            if account.username == username:
+                if account.account_type == "教師":#若權限不為教師則不用登入學科
+                    if new_account_type != "教師":
+                        account.subject = None
+                    else:
+                        new_subject = input("請輸入學科：")
+                    account.subject = new_subject
+                else:
+                    if new_account_type == "教師":#權限為教師登入學科
+                        new_subject = input("請輸入學科：")
+                    account.subject = new_subject
+                account.account_type = new_account_type
+                self.save_to_file()#存取變更
+                print(f"帳號 {username} 的帳戶類型已成功修改！")
+                return
+        print(f"找不到帳號 {username}，無法修改帳戶類型！")
+
+    def load_accounts_from_file(self):#載入初始帳戶函式
+        try:
+            with open("accounts.txt", "r") as file:
+                for line in file:
+                    username, password, account_type, email, subject = line.strip().split( )
+                    self.add_account(username, password, account_type, email, subject)
+            print("初始帳戶已載入成功！")
+        except FileNotFoundError:
+            print("找不到 accounts.txt 檔案，無法載入初始帳戶！")
+
+
+
+    def save_to_file(self):#存取帳戶更動函式
+        with open("accounts.txt", "w") as file:
+            for account in self.accounts:
+                file.write(f"{account.username} {account.password} {account.account_type} {account.email} {account.subject}\n")
+
+    def login(self, username, password):#帳戶登入函式
+        for account in self.accounts:
+            if account.username == username and account.password == password:
+                print("登入成功！")
+                if account.account_type == "管理者":
+                    self.admin_menu(account.username,account.account_type,account.subject)
+                elif account.account_type == "教師":
+                    self.teacher_menu(account.username,account.account_type,account.subject)
+                elif account.account_type == "學生":
+                    self.student_menu(account.username,account.account_type,account.subject)
+                return
+        print("帳號或密碼錯誤！")
+
+
+
+    def admin_menu(self,login_username,login_account_type,login_subject):#管理者選單函式
+        while True:
+            print("\n[管理者功能選單]")
+            print("1. 帳戶相關")
+            print("2. 成績相關")
+            print("3. 登出")
+
+            choice = input("請輸入選項: ")
+
+            if choice == "1":
+                while True:
+                  print("\n[帳戶相關功能選單]")
+                  print("1. 新增帳戶")
+                  print("2. 刪除帳戶")
+                  print("3. 修改帳戶類型")
+                  print("4. 列印帳戶清單")
+                  print("5. 匯出帳戶清單")
+                  print("6. 返回主選單")
+
+                  choice1 = input("請輸入選項: ")
+
+                  if choice1 == "1":
+                      username = input("請輸入帳號：")
+                      password = input("請輸入密碼：")
+                      account_type = input("請輸入帳戶類型（管理者、教師、學生）：")
+                      email = input("請輸入電子信箱：")
+                      if account_type == "教師":
+                          subject = input("請輸入學科：")
+                          self.add_account(username, password, account_type, email, subject)
+                      else:
+                          self.add_account(username, password, account_type, email)
+
+                  elif choice1 == "2":
+                      username = input("請輸入要刪除的帳號：")
+                      self.remove_account(username)
+
+                  elif choice1 == "3":
+                      username = input("請輸入要修改帳戶類型的帳號：")
+                      new_account_type = input("請輸入新的帳戶類型（管理者、教師、學生）：")
+                      self.change_account_type(username, new_account_type)
+
+                  elif choice1 == "4":
+                      self.print_account_list()
+
+                  elif choice1 == "5":
+                      self.export_accounts()
+
+                  elif choice1 == "6":
+                      break
+
+                  else:
+                      print("請輸入有效的選項！")
+
+
+
+            elif choice == "2":
+                self.grade_system(login_username,login_account_type,login_subject)
+
+            elif choice == "3":
+
+                break
+            else:
+                print("請輸入有效的選項！")
+
+
+
+    def print_account_list(self):#顯示出帳戶列表函式
+        print("\n[帳戶清單]")
+        print("{:<15} {:<15} {:<15} {:<15} {:<15}".format("帳戶名稱", "密碼", "帳戶類型", "電子信箱", "學科"))
+
+        for account in self.accounts:
+            if account.account_type == "教師":
+                print("{:<15} {:<15} {:<15} {:<15} {:<15}".format(account.username, account.password, account.account_type,
+                                                               account.email, account.subject))
+            else:
+                print("{:<15} {:<15} {:<15} {:<15}".format(account.username, account.password, account.account_type,
+                                                        account.email))
+
+        print()
+
+
+    def export_accounts(self):#依權限類型匯出帳戶列表函式
+          admin_accounts = []
+          teacher_accounts = []
+          student_accounts = []
+
+          for account in self.accounts:
+              if account.account_type == "管理者":
+                  admin_accounts.append(account)
+              elif account.account_type == "教師":
+                  teacher_accounts.append(account)
+              elif account.account_type == "學生":
+                  student_accounts.append(account)
+
+          try:
+              with open("admin_accounts.txt", "w") as file:#管理者
+                  for account in admin_accounts:
+                      file.write(f"{account.username} {account.password} {account.email} {account.subject}\n")
+              print("管理者帳號已成功輸出至 admin_accounts.txt")
+          except:
+              print("輸出管理者帳號時發生錯誤！")
+
+          try:
+              with open("teacher_accounts.txt", "w") as file:#教師
+                  for account in teacher_accounts:
+                      file.write(f"{account.username} {account.password} {account.email} {account.subject}\n")
+              print("教師帳號已成功輸出至 teacher_accounts.txt")
+          except:
+              print("輸出教師帳號時發生錯誤！")
+
+          try:
+              with open("student_accounts.txt", "w") as file:#學生
+                  for account in student_accounts:
+                      file.write(f"{account.username} {account.password} {account.email} {account.subject}\n")
+              print("學生帳號已成功輸出至 student_accounts.txt")
+          except:
+              print("輸出學生帳號時發生錯誤！")
+
+
+    def teacher_menu(self,login_username,login_account_type,login_subject):#教師選單函式
+        while True:
+          print("=== 教師功能選單 ===")
+          # 教師功能選單內容
+          print("1. 成績相關")
+          print("2. 登出")
+
+          choice = input("請輸入選項: ")
+
+          if choice == "1":
+            self.grade_system(login_username,login_account_type,login_subject)
+
+          elif choice == "2":
+            break
+          else:
+            print("請輸入有效的選項！")
+
+
+    def student_menu(self,login_username,login_account_type,login_subject):#學生選單函式
+        file_path = 'grades.txt'
+        while True:
+            print("=== 學生功能選單 ===")
+            # 學生功能選單內容
+            print("1. 建立個人成績檔")
+            print("2. 成績排名與成績預測")
+            print("3. 登出")
+
+            choice = input("請輸入選項: ")
+
+            if choice == '1':
+                self.create_personal_grade_file(file_path, login_username, login_account_type, login_subject)
+
+            elif choice == "2":
+                self.math_system(login_username,login_account_type,login_subject)
+
+            elif choice == "3":
+                break
+            else:
+              print("請輸入有效的選項！")
+
+
+
+    def reset_password(self, username):#重設密碼函式
+        for account in self.accounts:
+            if account.username == username:
+                email = account.email
+                verification_code = str(random.randint(100000, 999999))
+                self.send_verification_code(email, verification_code)
+
+                if self.verify_code(email, verification_code):
+                    new_password = input("請輸入新的密碼：")
+                    account.password = new_password
+                    self.save_to_file()
+                    print(f"帳號 {username} 的密碼已成功修改！")
+                else:
+                    print("驗證碼不正確，密碼未修改！")
+                return
+        print(f"找不到帳號 {username}，無法重設密碼！")
+
+    def send_verification_code(self, email, code):#找回密碼驗證碼寄送函式
+        # 需要您提供SMTP服務器的詳細資訊
+        smtp_server = 'smtp.gmail.com'
+        smtp_port = 587
+        smtp_username = 's1052001@gm.ncue.edu.tw'
+        smtp_password = 'wgvrrrffjewcfdyx'
+
+        sender_email = 's1052001@gm.ncue.edu.tw'
+        subject = '密碼重設驗證碼'
+        message = f'您的驗證碼是：{code}'
+
+        msg = MIMEText(message)
+        msg['Subject'] = subject
+        msg['From'] = sender_email
+        msg['To'] = email
+
+        try:
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+
+            server.quit()
+            print("驗證碼已成功寄送至信箱！(有可能在垃圾郵件內)")
+        except smtplib.SMTPException:
+            print("寄送驗證碼郵件時發生錯誤！")
+
+    def verify_code(self, email, code):#驗證碼確認函式
+        user_code = input("請輸入驗證碼：")
+        return user_code == code
+
+    def add_grade(self,file_path, grade, class_num, student_id, name, subject, score):  # 新增資訊
+
+        with open(file_path, 'r') as file:  # 讀取檔案並將檔案儲存於data這個變數中
+            data = file.readlines()
+
+        with open(file_path, 'w') as file:  # 用for迴圈讀取data內的資料，避免寫入時重置原本內部的資料
+            for line in data[:]:
+                line_data = line.strip().split(',')   # 去除行首和行尾的空白字符，使用逗號作為分隔符將其分割成一個包含多個元素的列表，並將結果存儲在line_data變數中
+                if (
+                  line_data[0] == grade
+                    and line_data[1] == class_num
+                    and line_data[2] == student_id
+                    and line_data[3] == name
+                    and line_data[4] == subject
+                ):  # 判斷是否有重複資料
+                    continue  # 若資料相同，跳過寫入舊資料
+
+                file.write(line.strip() + "\n")  # 將新資料寫入
+
+
+            file.write(f"{grade},{class_num},{student_id},{name},{subject},{score}\n")  #  將傳入的參數grade、class_num、student_id、name、subject和score組合成一行字串，並將其寫入檔案。
+
+
+    def _get_field_index(self,field):  #  這些欄位名稱按照年級、班級、學號、考試名稱、科目、成績去排序，用於後續處理資料時，根據欄位索引位置來取得相應的欄位值。
+        fields = ['年級', '班級', '學號', '考試名稱', '科目', '成績']
+        return fields.index(field)
+
+    def update_student_info(self,file_path, grade, class_num, student_id, name, subject, score, field, new_value):  # 更改資訊
+        lines = []  # 儲存要寫入檔案的行數據
+        found = False  # 追蹤是否找到符合條件的資料
+        with open(file_path, 'r') as file:  # 檔案物件存儲在file
+            for idx, line in enumerate(file):  # enumerate函式用於同時取得行的索引(idx)和行的內容(line)
+                data = line.strip().split(',') # 去除行首和行尾的空白字符後，使用逗號作為分隔符將其分割成一個包含多個元素的列表，並將結果存儲在data變數中
+                if (data[0] == str(grade) and
+                        data[1] == str(class_num) and
+                        data[2] == str(student_id) and
+                        data[3] == name and
+                        data[4] == subject and
+                        data[5] == str(score)):  # 檢查當前行的各個元素是否與傳入的參數相等
+                    found = True
+                    if field in ['年級', '班級', '學號', '考試名稱', '科目']:  # 來取得指定欄位的索引位置，然後將該欄位的值設置為new_value
+                        data[self._get_field_index(field)] = str(new_value)
+                    elif field == '成績':
+                        if 0 <= int(new_value) <= 100:  # 限制成績在0-100之間
+                            data[self._get_field_index(field)] = str(new_value)
+                        else:
+                            print("成績必須介於 0 到 100 之間")
+                            return
+                    else:
+                        print("無此項目，請重新輸入")
+                        return
+                lines.append(','.join(data))  # 將修改後的行數據轉換為逗號分隔的字串，並添加到lines列表中
+
+        if not found:
+            print("查無符合條件的資料")
+            return
+
+        with open(file_path, 'w') as file:
+            file.write('\n'.join(lines)+'\n')  #將lines列表中的所有行數據連接成一個字串，每行之間使用換行符\n分隔，並將該字串寫入檔案
+
+    def delete_student(self,file_path, student_id, grade, class_num, name, subject, score):  # 刪除資訊
+        lines = []
+        found = False
+        with open(file_path, 'r') as file:
+            for idx, line in enumerate(file):
+                data = line.strip().split(',')
+                if (data[0] == str(grade) and
+                        data[1] == str(class_num) and
+                        data[2] == str(student_id) and
+                        data[3] == name and
+                        data[4] == subject and
+                        data[5] == str(score)):  # 檢查當前行的各個元素是否與傳入的參數相等
+                    found = True
+                    continue  # 跳過該行資料，即刪除該學生資訊
+                lines.append(line.strip())
+
+        if not found:
+            print("查無符合條件的資料")
+            return
+        else:
+          print("學生資訊已刪除")
+        with open(file_path, 'w') as file:
+            file.write('\n'.join(lines)+'\n')  # 將lines列表中的所有行數據連接成一個字串並將該字串寫入檔案
+
+    def find_student_data(self,file_path, class_id, student_id, login_subject):  # 搜尋學生資料
+        student_data_list = []  # 建空列表，用於儲存符合條件的學生資料
+        with open(file_path, 'r') as file:
+          if login_subject == "None":  # 檢驗登錄身分(管理者、學生)
+            for line in file:  # 抓出每一筆符合輸入學號資料
+                data = line.strip().split(',')
+                if data[2] == student_id:
+                    student_data_list.append(data)
+          elif login_subject != "None":  # 檢驗登錄身分(教師)
+            for line in file:  # 抓出每一筆符合登陸科目資料
+                data = line.strip().split(',')
+                if data[1] == class_id:
+                  if data[4] == login_subject:
+                    student_data_list.append(data)
+
+        return student_data_list
+
+    def create_personal_grade_file(self,file_path, login_username, login_account_type, login_subject):  # 建立個人成績檔
+        if login_account_type == '管理者':  # 判斷登入身分
+          student_id = input("請輸入學號：")
+          class_id = 'None'
+        elif login_account_type == '教師':
+          class_id = input("請輸入班級：")
+          student_id = login_subject
+        elif login_account_type == '學生':
+          student_id = login_username
+          class_id = 'None'
+
+        student_data_list = self.find_student_data(file_path, class_id, student_id, login_subject)
+
+        if student_data_list:  # 建立成績檔
+            file_name = student_id + '.txt'
+            with open(file_name, 'w') as file:
+                header = "年級,班級,學號,考試名稱,科目,成績\n"
+                file.write(header)
+
+                for student_data in student_data_list:
+                    line = ','.join(student_data) + '\n'
+                    file.write(line)
+
+            print("已成功創建檔案", file_name)
+        else:
+            print("找不到學號為", student_id, "的資料。")
+
+    def grade_system(self,login_username,login_account_type,login_subject):
+        file_path = 'grades.txt'
+        while True:
+            print("請選擇操作：")
+            print("1. 學生資訊上傳")
+            print("2. 建立個人成績檔")
+            print("3. 寄送重修信給不及格的同學")
+            print("4. 成績排名與成績預測")
+            print("5. 返回主選單")
+            choice = input("選擇操作編號：")
+
+            if choice == '1':
+                file_path = 'grades.txt'
+                while True:
+                    print("請選擇操作：")
+                    print("1. 輸入成績")
+                    print("2. 修改學生資訊")
+                    print("3. 刪除學生資訊")
+                    print("4. 返回上一頁")
+                    sub_choice = input("選擇操作編號：")
+
+                    if sub_choice == '1':
+                      subject = input("請輸入科目: ")
+                      if login_account_type == "教師":  # 判斷是否有權限更動該科目
+                        while True:
+                          if login_subject == subject:
+                            break
+                          elif login_subject != subject:
+                            print('此帳戶無權限請重新輸入')
+                            subject = input("請輸入科目: ")
+                      grade = input("請輸入年級: ")
+                      class_num = input("請輸入班級: ")
+                      student_id = input("請輸入學號: ")
+                      name = input("請輸入考試名稱: ")
+                      while True:
+                        score = input("請輸入成績: ")
+                        if score.isdigit() and 0 <= int(score) <= 100:
+                          break
+                        else:
+                          print("成績輸入無效，請輸入0到100之間的整數")
+
+                      self.add_grade(file_path, grade, class_num, student_id, name, subject, score)
+                      print("成績已新增")
+
+                    elif sub_choice == '2':
+                        subject = input("請輸入要修改原科目: ")
+                        if login_account_type == "教師":  # 判斷是否有權限更動該科目
+                          while True:
+                            if login_subject == subject:
+                              break
+                            elif login_subject != subject:
+                              print('此帳戶無權限請重新輸入')
+                              subject = input("請輸入要修改原科目: ")
+                        grade = input("請輸入要修改的原學生年級: ")
+                        class_num = input("請輸入要修改的原學生班級: ")
+                        student_id = input("請輸入要修改的原學生學號: ")
+                        name = input("請輸入要修改的原考試名稱: ")
+                        score = input("請輸入要修改的原學生成績: ")
+                        field = input("請輸入要修改的項目（年級、班級、學號、考試名稱、科目、成績）：")
+                        new_value = input("請輸入新的值：")
+
+                        self.update_student_info(file_path, grade, class_num, student_id, name, subject, score, field, new_value)
+                        if field == "年級":
+                          print("學生年級已修改")
+                        elif field == "班級":
+                          print("學生班級已修改")
+                        elif field == "學號":
+                          print("學生學號已修改")
+                        elif field == "考試名稱":
+                          print("考試名稱已修改")
+                        elif field == "科目":
+                          print("學生科目已修改")
+                        elif field == "成績":
+                          if 0 <= int(new_value) <= 100:
+                            print("學生成績已修改")
+                          else:
+                            print("學生成績未修改")
+                        else:
+                          print("學生資訊未修改")
+
+                    elif sub_choice == '3':
+                        subject = input("請輸入要刪除的原科目: ")
+                        if login_account_type == "教師":  # 判斷是否有權限更動該科目
+                          while True:
+                            if login_subject == subject:
+                              break
+                            elif login_subject != subject:
+                              print('此帳戶無權限請重新輸入')
+                              subject = input("請輸入要修改原科目: ")
+                        grade = input("請輸入要刪除的原學生年級: ")
+                        class_num = input("請輸入要刪除的原學生班級: ")
+                        student_id = input("請輸入要刪除的原學生學號: ")
+                        name = input("請輸入要刪除的原考試名稱: ")
+                        score = input("請輸入要刪除的原學生成績: ")
+                        self.delete_student(file_path, student_id, grade, class_num, name, subject, score)
+                    elif sub_choice == '4':
+                        break
+                    else:
+                        print("無效的操作編號")
+            elif choice == '2':
+                self.create_personal_grade_file(file_path, login_username, login_account_type, login_subject)
+            elif choice == '3':
+                # 寄送重修信給不及格的同學
+                with open('accounts.txt', 'r') as file:
+                    accounts_lines = file.readlines()
+
+                # 建立一個空的字典，用於儲存學號與電子郵件地址的對應關係
+                accounts = {}
+
+                # 逐行檢查資料
+                for line in accounts_lines:
+                    data = line.strip().split(' ')
+                    student_id = data[0]  # 學生的學號
+                    email = data[3]  # 學生的電子郵件地址
+                    accounts[student_id] = email
+
+                # 開啟 grades.txt 檔案並讀取內容
+                with open(file_path, 'r') as file:
+                    lines = file.readlines()
+
+                # 建立一個空的列表，用於儲存不及格學生的學號及相關資料
+                low_grades_students = []
+
+                if login_subject == 'None':
+                  send_subject = input('輸出何種科目：')
+
+                # 逐行檢查資料
+                for line in lines:
+                    data = line.strip().split(',')
+                    subject = data[4]
+                    grade = int(data[5])
+
+                    if login_subject != 'None' and login_subject != subject:
+                      continue
+                    if login_subject == 'None' and send_subject != subject:
+                      continue
+
+                    # 如果成績低於60分，將該學生的學號及相關資料加入不及格學生列表
+                    if grade < 60:
+                        student_data = {
+                            '年級': data[0],
+                            '班級': data[1],
+                            '學號': data[2],
+                            '考試名稱': data[3],
+                            '科目': data[4],
+                            '成績': data[5]
+                        }
+                        low_grades_students.append(student_data)
+
+                # 發送通知信給不及格學生
+                for student in low_grades_students:
+                    student_id = student['學號']
+
+                    # 檢查學生是否有相應的電子郵件地址
+                    if student_id in accounts:
+                      # 構建郵件主體
+                        message = MIMEMultipart()
+                        message['From'] = EMAIL_ADDRESS
+                        message['To'] = accounts[student_id]  # 使用學生的電子郵件地址
+                        message['Subject'] = '成績通知'
+
+                        body = f"親愛的學生，您的學號為 {student['學號']}，您在以下科目的成績未達及格標準：\n\n"
+                        body += f"年級：{student['年級']}\n"
+                        body += f"班級：{student['班級']}\n"
+                        body += f"考試名稱：{student['考試名稱']}\n"
+                        body += f"科目：{student['科目']}\n"
+                        body += f"成績：{student['成績']}\n\n"
+                        body += "請與教師聯繫進行補救措施。"
+
+                        message.attach(MIMEText(body, 'plain'))
+
+                        # 連接郵件伺服器並發送郵件
+                        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                            server.starttls()
+                            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+                            server.send_message(message)
+
+                        print(f"已發送郵件給學號 {student_id} 的學生")
+                    else:
+                        print(f"找不到學號 {student_id} 的學生的電子郵件地址")
+            elif choice == '4':
+                self.math_system(login_username,login_account_type,login_subject)
+            elif choice == '5':
+                print("返回上一頁")
+                break
+            else:
+                print("無效的操作編號")
+
+
+    def read_grades_data(self,filename):
+    # 讀取成績資料並返回一個字典格式的資料結構
+
+    # Args:
+    #     #filename (str): 成績檔案名稱
+
+    # Returns:
+    #     #dict: 成績資料的字典
+        data = {}
+        with open(filename, 'r') as file:
+            for line in file:
+                reader = line.strip().split(',')
+                grade = reader[0]
+                class_num = reader[1]
+                student_id = reader[2]
+                test_count = int(reader[3])
+                subject = reader[4]
+                score = float(reader[5])
+
+                if student_id not in data:
+                    data[student_id] = {
+                        'grade': grade,
+                        'class': class_num,
+                        'name': None,
+                        'scores': {},
+                        'weighted_scores': {},
+                        'future_scores': {},
+                        'predictions': {}
+                    }
+
+                if subject not in data[student_id]['scores']:
+                    data[student_id]['scores'][subject] = []
+                    data[student_id]['weighted_scores'][subject] = []
+                    data[student_id]['future_scores'][subject] = []
+
+                data[student_id]['scores'][subject].append(score)
+
+        return data
+
+    def calculate_weighted_scores(self,data):
+    # 計算加權總分和加權平均
+
+    # Args:
+    #     data (dict): 成績資料的字典
+        for student_id, student_data in data.items():
+            for subject, scores in student_data['scores'].items():
+                weighted_scores = [score * (3 if subject == '國' else 2 if subject == '英' else 1) for score in scores]
+                data[student_id]['weighted_scores'][subject] = weighted_scores
+                data[student_id]['future_scores'][subject] = np.average(weighted_scores)
+
+    def calculate_rankings(self,rankings, data, student_id, weighted_total):
+    # 計算年級排名和班級排名
+
+    # Args:
+    #     data (dict): 成績資料的字典
+
+    # Returns:
+    #     tuple: 包含年級排名和班級排名的元組
+        grade = data[student_id]['grade']
+        class_num = data[student_id]['class']
+
+        if grade not in rankings:
+            rankings[grade] = {}
+        if class_num not in rankings[grade]:
+            rankings[grade][class_num] = []
+
+        rankings[grade][class_num].append((student_id, weighted_total))
+
+    def calculate_all_rankings(self,data):
+        grade_rankings = {}
+        class_rankings = {}
+
+        for student_id, student_data in data.items():
+            weighted_total = sum([sum(scores) for scores in student_data['weighted_scores'].values()])
+            self.calculate_rankings(grade_rankings, data, student_id, weighted_total)
+            self.calculate_rankings(class_rankings, data, student_id, weighted_total)
+
+        return grade_rankings, class_rankings
+
+    def print_rankings(self,grade_rankings, data):
+
+    # 印出排名結果
+
+    # Args:
+    #     rankings (dict): 排名資料的字典
+    #     data (dict): 成績資料的字典
+
+        for grade, class_rankings in grade_rankings.items():
+            print(f'年級 {grade} 排名:')
+            for class_num, rankings in class_rankings.items():
+                rankings = sorted(rankings, key=lambda x: x[1], reverse=True)
+                print(f'班級 {class_num} 排名:')
+                for rank, (student_id, weighted_total) in enumerate(rankings, start=1):
+                    print(f'第 {rank} 名: 學號 {student_id}，加權總分 {weighted_total}')
+                    print('預測分數:', data[student_id]['predictions'])
+                print()
+
+    def build_linear_regression_model(self,data):
+      """
+    建立線性回歸模型並進行預測
+
+    Args:
+        data (dict): 成績資料的字典
+      """
+        for student_id, student_data in data.items():
+            for subject, scores in student_data['scores'].items():
+                X = np.array(range(1, len(scores) + 1)).reshape(-1, 1)
+                y = np.array(scores)
+                model = LinearRegression()
+                model.fit(X, y)
+                predictions = model.predict(X)
+                data[student_id]['predictions'][subject] = np.mean(predictions)
+
+    def format_score(self,score):
+
+    # 格式化分數顯示
+
+    # Args:
+    #     score (float): 分數
+
+    # #Returns:
+    #     str: 格式化後的分數
+        if isinstance(score, float):
+            return f'{score:.2f}'
+        else:
+            return str(score)
+
+    def query_grades(self,data, login_username,login_account_type,login_subject):
+
+    # 根據權限進行成績查詢
+
+    # Args:
+    #     data (dict): 成績資料的字典
+    #     permission (str): 使用者的權限
+
+        if login_account_type == '管理者':
+            student_id = input('請輸入要查詢的學號：')
+            subject = input('請輸入要查詢的科目：')
+            if student_id in data and subject in data[student_id]['scores']:
+                print('學號:', student_id)
+                print('年級:', data[student_id]['grade'])
+                print('班級:', data[student_id]['class'])
+                print('科目:', subject)
+                print('成績:', [self.format_score(score) for score in data[student_id]['scores'][subject]])
+                print('加權總分:', self.format_score(sum(data[student_id]['weighted_scores'][subject])))
+                print('加權平均:', self.format_score(data[student_id]['future_scores'][subject]))
+                print('預測分數:', self.format_score(data[student_id]['predictions'][subject]))
+            else:
+                print('找不到該學號或科目')
+
+        elif login_account_type == '教師':
+            teacher_subject = login_subject
+            found_students = False
+            for student_id, student_data in data.items():
+                if teacher_subject in student_data['scores']:
+                    found_students = True
+                    print('學號:', student_id)
+                    print('年級:', student_data['grade'])
+                    print('班級:', student_data['class'])
+                    print('科目:', teacher_subject)
+                    print('成績:', [self.format_score(score) for score in student_data['scores'][teacher_subject]])
+                    print('加權總分:', self.format_score(sum(student_data['weighted_scores'][teacher_subject])))
+                    print('加權平均:', self.format_score(data[student_id]['future_scores'][teacher_subject]))
+                    print('預測分數:', self.format_score(data[student_id]['predictions'][teacher_subject]))
+                    print('-------------------')
+            if not found_students:
+                print('授課科目不符合')
+
+        elif login_account_type == '學生':
+            student_id = login_username
+            if student_id in data:
+                student_data = data[student_id]
+                print('學號:', student_id)
+                print('年級:', student_data['grade'])
+                print('班級:', student_data['class'])
+                print('成績:')
+                for subject, scores in student_data['scores'].items():
+                    print(subject, '成績:', [self.format_score(score) for score in scores])
+                    print('加權總分:', self.format_score(sum(student_data['weighted_scores'][subject])))
+                    print('加權平均:', self.format_score(data[student_id]['future_scores'][subject]))
+                    print('預測分數:', self.format_score(data[student_id]['predictions'][subject]))
+                print('-------------------')
+            else:
+                print('找不到該學號的學生資料')
+
+        else:
+            print('權限錯誤')
+
+    def math_system(self,login_username,login_account_type,login_subject):
+        data = self.read_grades_data('grades.txt')
+        self.calculate_weighted_scores(data)
+        grade_rankings, class_rankings = self.calculate_all_rankings(data)
+        self.print_rankings(grade_rankings, data)
+        self.build_linear_regression_model(data)
+        self.query_grades(data,login_username,login_account_type, login_subject)
+#定義主函式
+def main():
+    login_system = LoginSystem()
+    login_system.load_accounts_from_file()
+
+
+    while True:#登入系統選單
+        print("=== 登入系統 ===")
+        print("1. 登入")
+        print("2. 找回密碼")
+        print("3. 結束程式")
+
+        choice = input("請選擇操作項目：")
+
+        if choice == "1":
+            username = input("請輸入帳號：")
+            password = input("請輸入密碼：")
+            login_system.login(username, password)
+            print()
+
+        elif choice == "2":
+            username = input("請輸入帳號：")
+            login_system.reset_password(username)
+            print()
+
+        elif choice == "3":
+            break
+
+        else:
+            print("輸入無效，請重新輸入！")
+
+    print("感謝使用登入系統！")
+
+# 執行主程式
+if __name__ == "__main__":
+    main()
